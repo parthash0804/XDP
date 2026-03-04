@@ -34,6 +34,22 @@ file(GLOB AIE_JSON_PARSER_FILES
 
 if (XDP_CLIENT_BUILD_CMAKE STREQUAL "yes")
   set(IMPL_DIR "${PROFILE_DIR}/plugin/aie_profile/client")
+  if (XDP_NPU3_BUILD_CMAKE)
+    file(GLOB AIE_PROFILE_IMPL_FILES
+      "${IMPL_DIR}/aie_profile_npu3.h"
+      "${IMPL_DIR}/aie_profile_npu3.cpp"
+      "${IMPL_DIR}/aie_profile.h"
+      "${IMPL_DIR}/aie_profile.cpp"
+      "${IMPL_DIR}/aie_profile_ct_writer.h"
+      "${IMPL_DIR}/aie_profile_ct_writer.cpp"
+      "${PROFILE_DIR}/device/common/npu3/*"
+    )
+  else()
+    file(GLOB AIE_PROFILE_IMPL_FILES
+      "${IMPL_DIR}/*.h"
+      "${IMPL_DIR}/*.cpp"
+    )
+  endif()
 
   file(GLOB AIE_PROFILE_IMPL_FILES
     "${IMPL_DIR}/*.h"
