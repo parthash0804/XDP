@@ -20,6 +20,7 @@
 #include <memory>
 #include "xdp/profile/database/static_info/device_info.h"
 #include "xdp/profile/database/static_info/aie_constructs.h"
+#include "xdp/profile/database/static_info/elf_bin_data.h"
 #include "xdp/profile/database/static_info/pl_constructs.h"
 #include "xdp/profile/database/static_info/xclbin_info.h"
 #include "xdp/profile/device/pl_device_intf.h"

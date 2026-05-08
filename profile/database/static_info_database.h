@@ -15,6 +15,7 @@
 
 #include "core/common/system.h"
 #include "core/common/device.h"
+#include "core/include/xrt/experimental/xrt_elf.h"
 #include "xdp/profile/device/xdp_base_device.h"
 #include "xdp/profile/database/static_info/aie_util.h"
 #include "xdp/profile/database/static_info/aie_constructs.h"
@@ -339,6 +340,14 @@ namespace xdp {
     XDP_CORE_EXPORT
     void updateDeviceFromCoreDeviceElf(uint64_t deviceId,
                                     std::shared_ptr<xrt_core::device> device);
+
+    // POC overload: ELF flow that lets the source (xrt::elf) provide the
+    // metadata directly, instead of relying on disk-JSON fallback only.
+    // See xdp/profile/database/static_info/elf_bin_data.h.
+    XDP_CORE_EXPORT
+    void updateDeviceFromCoreDeviceElf(uint64_t deviceId,
+                                       std::shared_ptr<xrt_core::device> device,
+                                       xrt::elf elf);
 
     XDP_CORE_EXPORT
     uint64_t getHwCtxImplUid(void* hwCtxImpl);

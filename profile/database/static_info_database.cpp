@@ -31,6 +31,7 @@
 
 #include "xdp/profile/database/database.h"
 #include "xdp/profile/database/static_info/device_info.h"
+#include "xdp/profile/database/static_info/elf_bin_data.h"
 #include "xdp/profile/database/static_info/pl_constructs.h"
 #include "xdp/profile/database/static_info/xclbin_info.h"
 #include "xdp/profile/database/static_info_database.h"
@@ -326,6 +327,12 @@ namespace xdp {
     //  defaults.  300 MHz for PL clock rate and 1 GHz for AIE clock rate.
     if (deviceInfo.find(deviceId) == deviceInfo.end())
       return PL ? 300.0 : 1000.0 ;
+
+    // ELF flow has no PL section; only the AIE branch consults elfBin.
+    // The PL branch falls through to the xclbin path (and, since no
+    // ConfigInfo is built for ELF devices, returns the 300 MHz default).
+    if (!PL && deviceInfo[deviceId]->elfBin)
+      return deviceInfo[deviceId]->elfBin->aieClockRateMHz();
 
     ConfigInfo* config = deviceInfo[deviceId]->currentConfig() ;
     if (!config)
@@ -819,6 +826,11 @@ namespace xdp {
     if (deviceInfo.find(deviceId) == deviceInfo.end())
       return false ;
 
+    // ELF flow keeps the "have we configured counters yet?" flag on
+    // ElfBinData, since no XclbinInfo/ConfigInfo is built for it.
+    if (deviceInfo[deviceId]->elfBin)
+      return deviceInfo[deviceId]->elfBin->isAIECounterRead();
+
     for (const auto& config : deviceInfo[deviceId]->getLoadedConfigs()) {
       XclbinInfo* xclbin = config->getAieXclbin();
       if (!xclbin)
@@ -835,6 +847,15 @@ namespace xdp {
 
     if (deviceInfo.find(deviceId) == deviceInfo.end())
       return ;
+
+    // ELF flow keeps the counter-read flag on ElfBinData (see
+    // isAIECounterRead).  Xclbin flow continues to record it on the
+    // current ConfigInfo's AIE XclbinInfo.
+    if (deviceInfo[deviceId]->elfBin) {
+      deviceInfo[deviceId]->elfBin->setIsAIECounterRead(val) ;
+      return ;
+    }
+
     ConfigInfo* config = deviceInfo[deviceId]->currentConfig() ;
     if (!config)
       return ;
@@ -1701,7 +1722,53 @@ namespace xdp {
     }
     return;  
   }
- 
+
+  // ELF Flow POC: ElfBinData becomes the per-device AIE state container,
+  // i.e. the ELF analog of XclbinInfo.  No XclbinInfo or ConfigInfo is
+  // constructed in the ELF path; loadedConfigInfos stays empty.  The
+  // database lookups (getClockRateMHz, isAIECounterRead,
+  // setIsAIECounterRead) branch on devInfo->elfBin so they consult the
+  // ELF state when present and fall through to the xclbin path otherwise.
+  void
+  VPStaticDatabase::
+  updateDeviceFromCoreDeviceElf(uint64_t deviceId,
+                                std::shared_ptr<xrt_core::device> device,
+                                xrt::elf elf)
+  {
+    // Reuse / create DeviceInfo, mirroring the existing 2-arg overload.
+    DeviceInfo* devInfo = nullptr;
+    auto itr = deviceInfo.find(deviceId);
+    if (itr == deviceInfo.end()) {
+      deviceInfo[deviceId] = std::make_unique<DeviceInfo>();
+      devInfo = deviceInfo[deviceId].get();
+      devInfo->deviceId = deviceId;
+    } else {
+      devInfo = itr->second.get();
+    }
+
+    auto bin = std::make_unique<ElfBinData>(std::move(elf), std::move(device));
+
+    // Acquire AIE metadata via the source, then cache derived AIE state
+    // on the ElfBinData and register the reader on the side map that
+    // AieProfileMetadata consults.
+    boost::property_tree::ptree aieTree;
+    auto reader = bin->readAIEMetadata(aieTree);
+    if (reader) {
+      bin->populateFromReader(*reader);
+      devInfo->setAIEGeneration(bin->aieGeneration());
+      addAIEmetadataReader(deviceId, std::move(reader));
+    }
+    else {
+      xrt_core::message::send(xrt_core::message::severity_level::warning,
+                              "XRT",
+                              "AIE Profile ELF flow: no AIE metadata available; "
+                              "downstream stages may have nothing to configure.");
+    }
+
+    devInfo->elfBin  = std::move(bin);
+    devInfo->isReady = true;
+  }
+
   xrt::uuid VPStaticDatabase::getXclbinUuidOnDevice(std::shared_ptr<xrt_core::device> device)
   {
     if (!device) {

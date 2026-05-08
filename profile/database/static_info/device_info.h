@@ -36,6 +36,7 @@ namespace xdp {
   struct NoCNode ;
   class aie_cfg_tile ;
   struct ConfigInfo ;
+  class ElfBinData ;
 
   // An application may be run on a system that has multiple physical
   //  (or emulated) devices.  The DeviceInfo struct collects all of the
@@ -68,6 +69,16 @@ namespace xdp {
     // ****** Information specific to all previously loaded XCLBINs ******
     // *******************************************************************
     std::vector<std::unique_ptr<ConfigInfo>> loadedConfigInfos ;
+
+    // ******************************************************************
+    // ****** Information specific to the Full ELF flow (AIE only) ******
+    // ******************************************************************
+    // Populated only by the 3-arg updateDeviceFromCoreDeviceElf path.
+    // Null on every xclbin-flow device.  Holds the AIE state that the
+    // database serves to consumers (clock rate, hw gen, counter-read
+    // flag).  Future VPBinData refactor will collapse this and
+    // loadedConfigInfos into a unified vector<unique_ptr<VPBinData>>.
+    std::unique_ptr<ElfBinData> elfBin ;
 
     // Our AMs don't currently support profiling kernels that were compiled
     //  as multiple context kernels.  We call the XRT function
