@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "core/common/message.h"
+#include "xdp/profile/database/static_info/aie_constructs.h"
 
 namespace xdp {
 
@@ -24,6 +25,37 @@ namespace xdp {
     : m_elf(std::move(elf))
     , m_device(std::move(device))
   {
+  }
+
+  ElfBinData::~ElfBinData()
+  {
+    for (auto* c : m_aieList)
+      delete c;
+    m_aieList.clear();
+  }
+
+  void
+  ElfBinData::addAIECounter(uint32_t i, uint8_t col, uint8_t row, uint8_t num,
+                            uint16_t start, uint16_t end, uint8_t reset,
+                            uint64_t load, double freq, const std::string& mod,
+                            const std::string& aieName, uint8_t streamId)
+  {
+    m_aieList.push_back(new AIECounter(i, col, row, num, start, end, reset,
+                                       load, freq, mod, aieName, streamId));
+  }
+
+  uint64_t
+  ElfBinData::numAIECounters() const
+  {
+    return m_aieList.size();
+  }
+
+  AIECounter*
+  ElfBinData::getAIECounter(uint64_t idx) const
+  {
+    if (idx >= m_aieList.size())
+      return nullptr;
+    return m_aieList[idx];
   }
 
   xrt_core::uuid

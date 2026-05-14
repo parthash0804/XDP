@@ -906,10 +906,15 @@ namespace xdp {
   {
     std::lock_guard<std::mutex> lock(deviceLock) ;
 
-    if (deviceInfo.find(deviceId) == deviceInfo.end())
+    auto itr = deviceInfo.find(deviceId);
+    if (itr == deviceInfo.end())
       return 0 ;
 
-    ConfigInfo* config = deviceInfo[deviceId]->currentConfig() ;
+    // ELF flow: counters live on ElfBinData, not on a ConfigInfo.
+    if (itr->second->elfBin)
+      return itr->second->elfBin->numAIECounters() ;
+
+    ConfigInfo* config = itr->second->currentConfig() ;
     if (!config)
       return 0 ;
 
@@ -942,10 +947,15 @@ namespace xdp {
   {
     std::lock_guard<std::mutex> lock(deviceLock) ;
 
-    if (deviceInfo.find(deviceId) == deviceInfo.end())
+    auto itr = deviceInfo.find(deviceId);
+    if (itr == deviceInfo.end())
       return nullptr ;
 
-    ConfigInfo* config = deviceInfo[deviceId]->currentConfig() ;
+    // ELF flow: counters live on ElfBinData, not on a ConfigInfo.
+    if (itr->second->elfBin)
+      return itr->second->elfBin->getAIECounter(idx) ;
+
+    ConfigInfo* config = itr->second->currentConfig() ;
     if (!config)
       return nullptr ;
 

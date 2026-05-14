@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <boost/property_tree/ptree.hpp>
 
@@ -18,6 +19,11 @@
 #include "xdp/profile/database/static_info/filetypes/base_filetype_impl.h"
 
 namespace xdp {
+
+  // Forward declaration: full definition lives in aie_constructs.h, which
+  // we deliberately avoid including from this header to keep the public
+  // surface narrow.  Implementation file pulls in the full type.
+  struct AIECounter;
 
   // POC-local enum that identifies the source of binary metadata.  Will
   // be promoted into a shared vp_bin_data.h header once the abstract
@@ -42,7 +48,7 @@ namespace xdp {
     XDP_CORE_EXPORT
     ElfBinData(xrt::elf elf, std::shared_ptr<xrt_core::device> device);
 
-    ~ElfBinData() = default;
+    XDP_CORE_EXPORT ~ElfBinData();
 
     // Identity ---------------------------------------------------------
     VPBinDataKind  kind() const { return VPBinDataKind::Elf; }
@@ -54,6 +60,20 @@ namespace xdp {
     uint8_t aieGeneration()   const     { return m_aieGeneration; }
     bool    isAIECounterRead() const    { return m_aieCounterRead; }
     void    setIsAIECounterRead(bool v) { m_aieCounterRead = v; }
+
+    // AIE counter list -- the ELF analog of AIEInfo::aieList.  The
+    // xclbin path stores reserved AIE perf counters on the active
+    // XclbinInfo; the ELF path has no XclbinInfo, so the same list
+    // lives here.  Raw pointers match the xclbin-side ownership model
+    // (deleted in the destructor below).
+    XDP_CORE_EXPORT
+    void addAIECounter(uint32_t i, uint8_t col, uint8_t row, uint8_t num,
+                       uint16_t start, uint16_t end, uint8_t reset,
+                       uint64_t load, double freq, const std::string& mod,
+                       const std::string& aieName, uint8_t streamId = 0);
+
+    XDP_CORE_EXPORT uint64_t numAIECounters() const;
+    XDP_CORE_EXPORT AIECounter* getAIECounter(uint64_t idx) const;
 
     // Acquire AIE metadata.  Tries an ELF custom section first, then
     // falls back to disk-JSON (matching today's 2-arg ELF flow).
@@ -77,6 +97,9 @@ namespace xdp {
     double  m_aieClockRateMHz = 1000.0;
     uint8_t m_aieGeneration   = 1;
     bool    m_aieCounterRead  = false;
+
+    // Reserved AIE perf counters for this ELF-loaded device.
+    std::vector<AIECounter*> m_aieList;
   };
 
 } // namespace xdp

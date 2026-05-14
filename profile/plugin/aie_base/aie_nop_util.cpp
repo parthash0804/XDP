@@ -32,13 +32,13 @@ namespace xdp::aie {
       return false;
     }
 
-    xrt::module mod{nopElf};
+    hwContext.add_config(nopElf);
     xrt::kernel krnl;
     try {
-      krnl = xrt::ext::kernel{hwContext, mod, "XDP_KERNEL:{IPUV1CNN}"};
-    } catch (...) {
-      xrt_core::message::send(severity_level::warning, "XRT",
-                "XDP_KERNEL not found in HW Context. Cannot configure nop code.");
+      krnl = xrt::ext::kernel{hwContext, "XDP_KERNEL:IPUV1CNN"};
+    } catch (const std::exception& e) {
+      std::string msg = "XDP_KERNEL not found in HW Context. Cannot configure nop code. Error: " + std::string(e.what());
+      xrt_core::message::send(severity_level::warning, "XRT", msg);
       return false;
     }
 

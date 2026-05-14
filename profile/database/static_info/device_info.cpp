@@ -336,6 +336,15 @@ namespace xdp {
                                  const std::string& mod,
                                  const std::string& aieName, uint8_t streamId)
   {
+    // ELF flow: no ConfigInfo/XclbinInfo is built, so the AIE counter
+    // list lives on ElfBinData instead.  Mirrors the branch-on-elfBin
+    // pattern used by VPStaticDatabase for clock rate, hw gen, etc.
+    if (elfBin) {
+      elfBin->addAIECounter(i, col, row, num, start, end,
+                            reset, load, freq, mod, aieName, streamId) ;
+      return ;
+    }
+
     ConfigInfo* config = currentConfig() ;
     if (!config || config->currentXclbins.empty())
       return ;
