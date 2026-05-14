@@ -75,10 +75,12 @@ namespace xdp {
     XDP_CORE_EXPORT uint64_t numAIECounters() const;
     XDP_CORE_EXPORT AIECounter* getAIECounter(uint64_t idx) const;
 
-    // Acquire AIE metadata.  Tries an ELF custom section first, then
-    // falls back to disk-JSON (matching today's 2-arg ELF flow).
-    // Returns the produced filetype reader so the caller can register
-    // it on the database's metadata-reader map.  No XclbinInfo touched.
+    // Acquire AIE metadata.  Tries the AIE_TRACE_METADATA custom
+    // section embedded in the ELF first, then falls back to disk-JSON
+    // (aie_trace_config.json) matching today's 2-arg ELF flow.  Returns
+    // the produced filetype reader so the caller can register it on
+    // the database's metadata-reader map, or nullptr if neither source
+    // is available.  No XclbinInfo touched.
     XDP_CORE_EXPORT
     std::unique_ptr<aie::BaseFiletypeImpl>
     readAIEMetadata(boost::property_tree::ptree& out);
