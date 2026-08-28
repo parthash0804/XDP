@@ -58,6 +58,12 @@ namespace xdp::aie::trace {
       eventSets["mm2s_channels_stalls"]   = eventSets["functions"];
     }
 
+    // NOTE: Unlike the sets above, this one is not an alias of "functions" since
+    //       it excludes the function events. The core trace control still needs
+    //       one non-zero event, which the lock stall event provides.
+    if (xdp::aie::isAIE2ps(hwGen))
+      eventSets["lock_stall_s2mm_backpressure_starvation"] = {XAIE_EVENT_LOCK_STALL_CORE};
+
     return eventSets;
   }
 
@@ -135,6 +141,16 @@ namespace xdp::aie::trace {
       eventSets["mm2s_channels_stalls"] =
          {XAIE_EVENT_DMA_MM2S_0_START_BD_MEM,              XAIE_EVENT_DMA_MM2S_0_FINISHED_BD_MEM,
           XAIE_EVENT_DMA_MM2S_0_STREAM_BACKPRESSURE_MEM,   XAIE_EVENT_DMA_MM2S_0_MEMORY_STARVATION_MEM};
+    }
+
+    // Core lock stalls with S2MM backpressure and starvation on both channels
+    // NOTE: Supported on AIE2ps only. Keep this condition identical to the one
+    //       in getCoreEventSets() so both modules are either set or left empty.
+    if (xdp::aie::isAIE2ps(hwGen)) {
+      eventSets["lock_stall_s2mm_backpressure_starvation"] =
+         {XAIE_EVENT_DMA_S2MM_0_MEMORY_BACKPRESSURE_MEM,   XAIE_EVENT_DMA_S2MM_1_MEMORY_BACKPRESSURE_MEM,
+          XAIE_EVENT_DMA_S2MM_0_STREAM_STARVATION_MEM,     XAIE_EVENT_DMA_S2MM_1_STREAM_STARVATION_MEM,
+          XAIE_EVENT_LOCK_STALL_CORE};
     }
 
     eventSets["mm2s_channels"]   = eventSets["s2mm_channels"];
