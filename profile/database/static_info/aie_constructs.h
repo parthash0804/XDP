@@ -60,6 +60,9 @@ namespace xdp {
     uint8_t  col = 0;
     std::vector<uint8_t> stream_ids;
     std::vector<uint8_t> is_master_vec;
+    // Parallel to stream_ids/is_master_vec: DMA channel for each monitored GMIO/ExternalBuffer
+    // (AIESW-40993 / AIESW-48837 — stream switch port index is not the DMA channel).
+    std::vector<uint8_t> channel_ids;
     // Pre-sized to maximum known port count (NUM_SWITCH_MONITOR_PORTS=8) with default "unused" values
     std::vector<std::string> port_names{NUM_SWITCH_MONITOR_PORTS, "unused"};
     // Pre-sized to maximum known channel count (NUM_MEM_CHANNELS=6) with default "unused" values
@@ -101,6 +104,10 @@ namespace xdp {
       ss << " Master: ";
       for (auto master : tile.is_master_vec) {
       ss << +master << " ";
+      }
+      ss << " Channels: ";
+      for (auto ch : tile.channel_ids) {
+      ss << +ch << " ";
       }
       os << ss.str();
       return os;

@@ -410,12 +410,15 @@ AIEControlConfigFiletype::getInterfaceTiles(const std::string& graphName,
             if ((metricStr == "read_bandwidth") && (!isMaster)) {
               it->stream_ids.push_back(streamId);
               it->is_master_vec.push_back(isMaster);
+              it->channel_ids.push_back(channelNum);
             } else if ((metricStr == "write_bandwidth") && (isMaster)) {
               it->stream_ids.push_back(streamId);
               it->is_master_vec.push_back(isMaster);
+              it->channel_ids.push_back(channelNum);
             } else if ((metricStr != "read_bandwidth") && (metricStr != "write_bandwidth")) {
               it->stream_ids.push_back(streamId);
               it->is_master_vec.push_back(isMaster);
+              it->channel_ids.push_back(channelNum);
             }
 
             if (type == io_type::PLIO) {
@@ -444,13 +447,16 @@ AIEControlConfigFiletype::getInterfaceTiles(const std::string& graphName,
             if ((metricStr == "read_bandwidth") && (!isMaster)) {
                 tile.stream_ids.push_back(streamId);
                 tile.is_master_vec.push_back(isMaster);
+                tile.channel_ids.push_back(channelNum);
             } else if ((metricStr == "write_bandwidth") && (isMaster)) {
                 tile.stream_ids.push_back(streamId);
                 tile.is_master_vec.push_back(isMaster);
+                tile.channel_ids.push_back(channelNum);
             }
             else if ((metricStr != "read_bandwidth") && (metricStr != "write_bandwidth")) {
                 tile.stream_ids.push_back(streamId);
                 tile.is_master_vec.push_back(isMaster);
+                tile.channel_ids.push_back(channelNum);
             }
 
             // Set port name at specific index with bounds checking

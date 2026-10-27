@@ -105,29 +105,29 @@ namespace xdp::aie::trace {
         switchPortMap[portnum] = switchPortRsc;
 
         if (type == module_type::core) {
-          // AIE Tiles - Monitor DMA channels
+          // AIE Tiles - Monitor DMA channels (use requested channel0/channel1, not port slot)
           bool isMaster = ((portnum >= 2) || (metricSet.find("s2mm") != std::string::npos));
           auto slaveOrMaster = isMaster ? XAIE_STRMSW_MASTER : XAIE_STRMSW_SLAVE;
           std::string typeName = isMaster ? "S2MM" : "MM2S";
           std::string msg = "Configuring core module stream switch to monitor DMA " 
-                          + typeName + " channel " + std::to_string(channelNum);
+                          + typeName + " channel " + std::to_string(channel);
           xrt_core::message::send(severity_level::debug, "XRT", msg);
-          switchPortRsc->setPortToSelect(slaveOrMaster, DMA, channelNum);
+          switchPortRsc->setPortToSelect(slaveOrMaster, DMA, channel);
 
           // Record for runtime config file
           // NOTE: channel info informs back-end there will be events on that channel
-          config.port_trace_ids[portnum] = channelNum;
+          config.port_trace_ids[portnum] = channel;
           config.port_trace_is_master[portnum] = isMaster;
 
           if (isMaster) {
-            config.s2mm_channels[channelNum] = channelNum;
-            if (channelNum < tile.s2mm_names.size())
-              config.s2mm_names[channelNum] = tile.s2mm_names.at(channelNum);
+            config.s2mm_channels[channelNum] = channel;
+            if (channel < tile.s2mm_names.size())
+              config.s2mm_names[channelNum] = tile.s2mm_names.at(channel);
           }
           else {
-            config.mm2s_channels[channelNum] = channelNum;
-            if (channelNum < tile.mm2s_names.size())
-              config.mm2s_names[channelNum] = tile.mm2s_names.at(channelNum);
+            config.mm2s_channels[channelNum] = channel;
+            if (channel < tile.mm2s_names.size())
+              config.mm2s_names[channelNum] = tile.mm2s_names.at(channel);
           }
         }
         // Interface tiles (e.g., PLIO, GMIO)
@@ -139,32 +139,38 @@ namespace xdp::aie::trace {
           auto slaveOrMaster = (tile.is_master_vec.at(portnum) == 0)   ? XAIE_STRMSW_SLAVE : XAIE_STRMSW_MASTER;
           std::string typeName = (tile.is_master_vec.at(portnum) == 0) ? "slave" : "master";
           uint8_t streamPortId = static_cast<uint8_t>(tile.stream_ids.at(portnum));
+          // Resolved DMA channel for this monitored stream (not request channel by slot).
+          // On AIE2PS GMIO, stream switch SOUTH port != DMA channel (AIESW-40993/48837).
+          uint8_t resolvedChannel = channel;
+          if ((tile.subtype == io_type::GMIO) && (portnum < tile.channel_ids.size()))
+            resolvedChannel = tile.channel_ids.at(portnum);
 
           std::string msg = "Configuring interface tile stream switch to monitor " 
-                          + typeName + " stream port " + std::to_string(streamPortId);
+                          + typeName + " stream port " + std::to_string(streamPortId)
+                          + " (DMA channel " + std::to_string(resolvedChannel) + ")";
           xrt_core::message::send(severity_level::debug, "XRT", msg);
           switchPortRsc->setPortToSelect(slaveOrMaster, SOUTH, streamPortId);
 
           // Record for runtime config file
-          config.port_trace_ids[portnum] = (tile.subtype == io_type::PLIO) ? portnum : channel;
+          config.port_trace_ids[portnum] = (tile.subtype == io_type::PLIO) ? portnum : resolvedChannel;
           config.port_trace_is_master[portnum] = (tile.is_master_vec.at(portnum) != 0);
           if (tile.subtype == io_type::PLIO) {
             if (streamPortId < tile.port_names.size())
               config.port_trace_names[portnum] = tile.port_names.at(streamPortId);
           } else {
-            if (channel < tile.port_names.size())
-              config.port_trace_names[portnum] = tile.port_names.at(channel);
+            if (resolvedChannel < tile.port_names.size())
+              config.port_trace_names[portnum] = tile.port_names.at(resolvedChannel);
           }
 
           if (tile.is_master_vec.at(portnum) == 0) {
-            config.mm2s_channels[channelNum] = channel;
-            if (channelNum < tile.mm2s_names.size())
-              config.mm2s_names[channelNum] = tile.mm2s_names.at(channelNum);
+            config.mm2s_channels[channelNum] = resolvedChannel;
+            if (resolvedChannel < tile.mm2s_names.size())
+              config.mm2s_names[channelNum] = tile.mm2s_names.at(resolvedChannel);
           }
           else {
-            config.s2mm_channels[channelNum] = channel;
-            if (channelNum < tile.s2mm_names.size())
-              config.s2mm_names[channelNum] = tile.s2mm_names.at(channelNum);
+            config.s2mm_channels[channelNum] = resolvedChannel;
+            if (resolvedChannel < tile.s2mm_names.size())
+              config.s2mm_names[channelNum] = tile.s2mm_names.at(resolvedChannel);
           }
         }
         else {
